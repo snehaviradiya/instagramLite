@@ -27,8 +27,25 @@ async function create(req, res) {
     }
 
     console.error(error);
-    return res.status(500).json({ error: "Internal server error" });
+    return res.status(500).json({
+      error: "Internal server error",
+    });
   }
 }
 
-module.exports = { create };
+async function list(req, res) {
+  try {
+    const users = await usersService.listUsers();
+    return res.status(200).json(users);
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({
+      error: "Internal server error",
+    });
+  }
+}
+
+module.exports = {
+  create,
+  list,
+};

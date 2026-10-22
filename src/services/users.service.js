@@ -7,4 +7,11 @@ async function createUser(data) {
   });
 }
 
-module.exports = { createUser };
+async function listUsers() {
+  return prisma.user.findMany();
+}
+
+module.exports = {
+  createUser,
+  listUsers,
+};
