@@ -18,9 +18,16 @@ async function getUserById(id) {
   });
 }
 
+async function updateUser(id, data) {
+  return prisma.user.update({
+    where: { id: Number(id) },
+    data,
+  });
+}
 
 module.exports = {
   createUser,
   listUsers,
   getUserById,
+  updateUser,
 };
