@@ -98,9 +98,32 @@ async function update(req, res) {
 }
 
 
+async function remove(req, res) {
+  try {
+    const user = await usersService.deleteUser(req.params.id);
+
+    return res.status(200).json({
+      message: "User deleted successfully",
+      user,
+    });
+  } catch (error) {
+    if (error.code === "P2025") {
+      return res.status(404).json({
+        error: "User not found",
+      });
+    }
+
+    console.error(error);
+    return res.status(500).json({
+      error: "Internal server error",
+    });
+  }
+}
+
 module.exports = {
   create,
   list,
   getOne,
   update,
+  remove,
 };
