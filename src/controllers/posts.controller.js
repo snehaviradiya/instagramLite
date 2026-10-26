@@ -1,3 +1,4 @@
+
 const postsService = require("../services/posts.service");
 
 async function create(req, res) {
@@ -22,9 +23,67 @@ async function create(req, res) {
 }
 
 async function list(req, res) {
+  const {
+    page: rawPage,
+    limit: rawLimit,
+    sortBy: rawSortBy,
+    order: rawOrder,
+    location,
+    search,
+    startDate,
+    endDate,
+  } = req.query;
+
+  const page = rawPage === undefined ? 1 : Number(rawPage);
+  const requestedLimit = rawLimit === undefined ? 10 : Number(rawLimit);
+
+  if (
+    !Number.isInteger(page) ||
+    page < 1 ||
+    !Number.isInteger(requestedLimit) ||
+    requestedLimit < 1
+  ) {
+    return res.status(400).json({
+      error: "page and limit must be positive integers",
+    });
+  }
+
+  const limit = Math.min(requestedLimit, 50);
+  const sortBy = rawSortBy || "createdAt";
+  const order = rawOrder || "desc";
+
+  if (sortBy !== "createdAt") {
+    return res.status(400).json({
+      error: "sortBy must be createdAt",
+    });
+  }
+
+  if (!["asc", "desc"].includes(order)) {
+    return res.status(400).json({
+      error: "order must be asc or desc",
+    });
+  }
+
+  if (
+    (startDate && Number.isNaN(Date.parse(startDate))) ||
+    (endDate && Number.isNaN(Date.parse(endDate)))
+  ) {
+    return res.status(400).json({ error: "Invalid date format" });
+  }
+
   try {
-    const posts = await postsService.listPosts();
-    return res.status(200).json(posts);
+    const result = await postsService.listPosts({
+      page,
+      limit,
+      sortBy,
+      order,
+      location,
+      search,
+      startDate,
+      endDate,
+    });
+
+    return res.status(200).json(result);
   } catch (error) {
     console.error(error);
     return res.status(500).json({ error: "Internal server error" });
@@ -47,9 +106,8 @@ async function getOne(req, res) {
 }
 
 async function update(req, res) {
-  // Only caption and location can be updated.
-  const { caption, location } = req.body;
   const data = {};
+  const { caption, location } = req.body;
 
   if (caption !== undefined) data.caption = caption;
   if (location !== undefined) data.location = location;
