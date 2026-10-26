@@ -30,8 +30,8 @@ async function list(req, res) {
     order: rawOrder,
     location,
     search,
-    startDate,
-    endDate,
+    from,
+    to,
   } = req.query;
 
   const page = rawPage === undefined ? 1 : Number(rawPage);
@@ -52,9 +52,9 @@ async function list(req, res) {
   const sortBy = rawSortBy || "createdAt";
   const order = rawOrder || "desc";
 
-  if (sortBy !== "createdAt") {
+  if (!["createdAt", "updatedAt"].includes(sortBy)) {
     return res.status(400).json({
-      error: "sortBy must be createdAt",
+      error: "sortBy must be one of: createdAt, updatedAt",
     });
   }
 
@@ -64,11 +64,18 @@ async function list(req, res) {
     });
   }
 
+const isValidDate = (value) =>
+  /^\d{4}-\d{2}-\d{2}$/.test(value) &&
+  !Number.isNaN(Date.parse(value)) &&
+  new Date(value).toISOString().slice(0, 10) === value;
+
   if (
-    (startDate && Number.isNaN(Date.parse(startDate))) ||
-    (endDate && Number.isNaN(Date.parse(endDate)))
+    (from !== undefined && !isValidDate(from)) ||
+    (to !== undefined && !isValidDate(to))
   ) {
-    return res.status(400).json({ error: "Invalid date format" });
+    return res.status(400).json({
+      error: "from and to must be valid dates",
+    });
   }
 
   try {
@@ -79,8 +86,8 @@ async function list(req, res) {
       order,
       location,
       search,
-      startDate,
-      endDate,
+      from,
+      to,
     });
 
     return res.status(200).json(result);

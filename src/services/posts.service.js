@@ -13,46 +13,47 @@ async function listPosts(options = {}) {
     order = "desc",
     location,
     search,
-    startDate,
-    endDate,
+    from,
+    to,
   } = options;
 
   const where = {};
 
   if (location) {
     where.location = {
-      contains: location,
+      equals: location,
       mode: "insensitive",
     };
   }
 
   if (search) {
-    where.OR = [
-      { caption: { contains: search, mode: "insensitive" } },
-      { location: { contains: search, mode: "insensitive" } },
-    ];
+    where.caption = {
+      contains: search,
+      mode: "insensitive",
+    };
   }
 
-  if (startDate || endDate) {
+  if (from || to) {
     where.createdAt = {};
 
-    if (startDate) {
-      where.createdAt.gte = new Date(startDate);
+    if (from) {
+      where.createdAt.gte = new Date(from);
     }
 
-    if (endDate) {
-      where.createdAt.lte = new Date(endDate);
+    if (to) {
+      where.createdAt.lt = new Date(to);
     }
   }
 
-  const data = await prisma.post.findMany({
-    where,
-    skip: (page - 1) * limit,
-    take: limit,
-    orderBy: { [sortBy]: order },
-  });
-
-  const total = await prisma.post.count({ where });
+  const [data, total] = await prisma.$transaction([
+    prisma.post.findMany({
+      where,
+      skip: (page - 1) * limit,
+      take: limit,
+      orderBy: { [sortBy]: order },
+    }),
+    prisma.post.count({ where }),
+  ]);
 
   return {
     data,
