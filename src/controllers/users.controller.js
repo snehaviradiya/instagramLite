@@ -33,7 +33,6 @@ async function create(req, res) {
   }
 }
 
-
 async function list(req, res) {
   const {
     page: rawPage,
@@ -105,7 +104,6 @@ async function list(req, res) {
     });
   }
 }
-
 
 async function getOne(req, res) {
   try {
