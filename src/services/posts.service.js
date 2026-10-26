@@ -14,8 +14,23 @@ async function getPostById(id) {
   });
 }
 
+async function updatePost(id, data) {
+  return prisma.post.update({
+    where: { id: Number(id) },
+    data,
+  });
+}
+
+async function deletePost(id) {
+  return prisma.post.delete({
+    where: { id: Number(id) },
+  });
+}
+
 module.exports = {
   createPost,
   listPosts,
   getPostById,
+  updatePost,
+  deletePost,
 };

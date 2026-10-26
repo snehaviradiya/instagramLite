@@ -46,8 +46,45 @@ async function getOne(req, res) {
   }
 }
 
+async function update(req, res) {
+  // Only caption and location can be updated.
+  const { caption, location } = req.body;
+  const data = {};
+
+  if (caption !== undefined) data.caption = caption;
+  if (location !== undefined) data.location = location;
+
+  try {
+    const post = await postsService.updatePost(req.params.id, data);
+    return res.status(200).json(post);
+  } catch (error) {
+    if (error.code === "P2025") {
+      return res.status(404).json({ error: "Post not found" });
+    }
+
+    console.error(error);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+}
+
+async function remove(req, res) {
+  try {
+    await postsService.deletePost(req.params.id);
+    return res.status(204).send();
+  } catch (error) {
+    if (error.code === "P2025") {
+      return res.status(404).json({ error: "Post not found" });
+    }
+
+    console.error(error);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+}
+
 module.exports = {
   create,
   list,
   getOne,
+  update,
+  remove,
 };
