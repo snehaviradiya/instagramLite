@@ -2,7 +2,16 @@
 const prisma = require("../db");
 
 async function createPost(data) {
-  return prisma.post.create({ data });
+  try {
+    return await prisma.post.create({ data });
+  } catch (error) {
+    if (error.code === "P2003") {
+      const notFound = new Error("User not found");
+      notFound.code = "USER_NOT_FOUND";
+      throw notFound;
+    }
+    throw error;
+  }
 }
 
 async function listPosts(options = {}) {
@@ -20,37 +29,41 @@ async function listPosts(options = {}) {
   const where = {};
 
   if (location) {
-    where.location = {
-      equals: location,
-      mode: "insensitive",
-    };
+    where.location = { equals: location, mode: "insensitive" };
   }
 
   if (search) {
-    where.caption = {
-      contains: search,
-      mode: "insensitive",
-    };
+    where.caption = { contains: search, mode: "insensitive" };
   }
 
   if (from || to) {
     where.createdAt = {};
-
-    if (from) {
-      where.createdAt.gte = new Date(from);
-    }
-
+    if (from) where.createdAt.gte = new Date(from);
     if (to) {
-      where.createdAt.lt = new Date(to);
+      const endDate = new Date(to);
+      endDate.setDate(endDate.getDate() + 1);
+      where.createdAt.lt = endDate;
     }
   }
+
+  const orderBy = sortBy === "likes"
+    ? [{ likes: { _count: order } }, { createdAt: "desc" }]
+    : { [sortBy]: order };
 
   const [data, total] = await prisma.$transaction([
     prisma.post.findMany({
       where,
       skip: (page - 1) * limit,
       take: limit,
-      orderBy: { [sortBy]: order },
+      orderBy,
+      include: {
+        author: {
+          select: { id: true, username: true, fullname: true },
+        },
+        _count: {
+          select: { likes: true },
+        },
+      },
     }),
     prisma.post.count({ where }),
   ]);
@@ -69,6 +82,18 @@ async function listPosts(options = {}) {
 async function getPostById(id) {
   return prisma.post.findUnique({
     where: { id: Number(id) },
+    include: {
+      author: {
+        select: {
+          id: true,
+          username: true,
+          fullname: true,
+        },
+      },
+      _count: {
+        select: { likes: true },
+      },
+    },
   });
 }
 

@@ -2,21 +2,34 @@
 const postsService = require("../services/posts.service");
 
 async function create(req, res) {
-  const { imageUrl, caption, location } = req.body;
+  const { imageUrl, authorId, caption, location } = req.body;
 
-  if (!imageUrl) {
-    return res.status(400).json({ error: "imageUrl is required" });
+  if (!imageUrl || authorId === undefined || authorId === null || authorId === "") {
+    return res.status(400).json({
+      error: "imageUrl and authorId are required",
+    });
+  }
+
+  const parsedAuthorId = Number(authorId);
+
+  if (!Number.isInteger(parsedAuthorId) || parsedAuthorId <= 0) {
+    return res.status(404).json({ error: "User not found" });
   }
 
   try {
     const post = await postsService.createPost({
       imageUrl,
+      authorId: parsedAuthorId,
       ...(caption !== undefined ? { caption } : {}),
       ...(location !== undefined ? { location } : {}),
     });
 
     return res.status(201).json(post);
   } catch (error) {
+    if (error.code === "P2003" || error.code === "USER_NOT_FOUND") {
+      return res.status(404).json({ error: "User not found" });
+    }
+
     console.error(error);
     return res.status(500).json({ error: "Internal server error" });
   }
@@ -52,22 +65,20 @@ async function list(req, res) {
   const sortBy = rawSortBy || "createdAt";
   const order = rawOrder || "desc";
 
-  if (!["createdAt", "updatedAt"].includes(sortBy)) {
-    return res.status(400).json({
-      error: "sortBy must be one of: createdAt, updatedAt",
-    });
-  }
+  if (!["createdAt", "updatedAt", "likes"].includes(sortBy)) {
+  return res.status(400).json({
+    error: "sortBy must be one of: createdAt, updatedAt, likes",
+  });
+}
 
   if (!["asc", "desc"].includes(order)) {
-    return res.status(400).json({
-      error: "order must be asc or desc",
-    });
+    return res.status(400).json({ error: "order must be asc or desc" });
   }
 
-const isValidDate = (value) =>
-  /^\d{4}-\d{2}-\d{2}$/.test(value) &&
-  !Number.isNaN(Date.parse(value)) &&
-  new Date(value).toISOString().slice(0, 10) === value;
+  const isValidDate = (value) =>
+    /^\d{4}-\d{2}-\d{2}$/.test(value) &&
+    !Number.isNaN(Date.parse(value)) &&
+    new Date(value).toISOString().slice(0, 10) === value;
 
   if (
     (from !== undefined && !isValidDate(from)) ||
@@ -116,6 +127,7 @@ async function update(req, res) {
   const data = {};
   const { caption, location } = req.body;
 
+  // authorId is intentionally ignored during updates.
   if (caption !== undefined) data.caption = caption;
   if (location !== undefined) data.location = location;
 

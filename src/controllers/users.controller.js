@@ -13,9 +13,7 @@ async function create(req, res) {
   try {
     const data = { username, email, fullname };
 
-    if (bio !== undefined) {
-      data.bio = bio;
-    }
+    if (bio !== undefined) data.bio = bio;
 
     const user = await usersService.createUser(data);
     return res.status(201).json(user);
@@ -27,9 +25,7 @@ async function create(req, res) {
     }
 
     console.error(error);
-    return res.status(500).json({
-      error: "Internal server error",
-    });
+    return res.status(500).json({ error: "Internal server error" });
   }
 }
 
@@ -40,6 +36,7 @@ async function list(req, res) {
     sortBy: rawSortBy,
     order: rawOrder,
     isPrivate: rawIsPrivate,
+    hasPosts: rawHasPosts,
     search,
   } = req.query;
 
@@ -48,10 +45,8 @@ async function list(req, res) {
     rawLimit === undefined ? 10 : Number(rawLimit);
 
   if (
-    !Number.isInteger(page) ||
-    page < 1 ||
-    !Number.isInteger(requestedLimit) ||
-    requestedLimit < 1
+    !Number.isInteger(page) || page < 1 ||
+    !Number.isInteger(requestedLimit) || requestedLimit < 1
   ) {
     return res.status(400).json({
       error: "page and limit must be positive integers",
@@ -69,12 +64,11 @@ async function list(req, res) {
   }
 
   if (!["asc", "desc"].includes(order)) {
-    return res.status(400).json({
-      error: "order must be asc or desc",
-    });
+    return res.status(400).json({ error: "order must be asc or desc" });
   }
 
   let isPrivate;
+  let hasPosts;
 
   if (rawIsPrivate !== undefined) {
     if (!["true", "false"].includes(rawIsPrivate)) {
@@ -82,8 +76,16 @@ async function list(req, res) {
         error: "isPrivate must be true or false",
       });
     }
-
     isPrivate = rawIsPrivate === "true";
+  }
+
+  if (rawHasPosts !== undefined) {
+    if (!["true", "false"].includes(rawHasPosts)) {
+      return res.status(400).json({
+        error: "hasPosts must be true or false",
+      });
+    }
+    hasPosts = rawHasPosts === "true";
   }
 
   try {
@@ -93,15 +95,14 @@ async function list(req, res) {
       sortBy,
       order,
       isPrivate,
+      hasPosts,
       search,
     });
 
     return res.status(200).json(result);
   } catch (error) {
     console.error(error);
-    return res.status(500).json({
-      error: "Internal server error",
-    });
+    return res.status(500).json({ error: "Internal server error" });
   }
 }
 
@@ -116,9 +117,37 @@ async function getOne(req, res) {
     return res.status(200).json(user);
   } catch (error) {
     console.error(error);
-    return res.status(500).json({
-      error: "Internal server error",
+    return res.status(500).json({ error: "Internal server error" });
+  }
+}
+
+async function getPosts(req, res) {
+  const page = req.query.page === undefined ? 1 : Number(req.query.page);
+  const limit = req.query.limit === undefined ? 10 : Number(req.query.limit);
+
+  if (
+    !Number.isInteger(page) || page < 1 ||
+    !Number.isInteger(limit) || limit < 1
+  ) {
+    return res.status(400).json({
+      error: "page and limit must be positive integers",
     });
+  }
+
+  try {
+    const result = await usersService.getUserPosts(req.params.id, {
+      page,
+      limit,
+    });
+
+    if (result === null) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    return res.status(200).json(result);
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ error: "Internal server error" });
   }
 }
 
@@ -139,9 +168,7 @@ async function update(req, res) {
     }
 
     console.error(error);
-    return res.status(500).json({
-      error: "Internal server error",
-    });
+    return res.status(500).json({ error: "Internal server error" });
   }
 }
 
@@ -155,9 +182,37 @@ async function remove(req, res) {
     }
 
     console.error(error);
-    return res.status(500).json({
-      error: "Internal server error",
+    return res.status(500).json({ error: "Internal server error" });
+  }
+}
+
+async function getLikedPosts(req, res) {
+  const page = req.query.page === undefined ? 1 : Number(req.query.page);
+  const limit = req.query.limit === undefined ? 10 : Number(req.query.limit);
+
+  if (
+    !Number.isInteger(page) || page < 1 ||
+    !Number.isInteger(limit) || limit < 1
+  ) {
+    return res.status(400).json({
+      error: "page and limit must be positive integers",
     });
+  }
+
+  try {
+    const result = await usersService.getUserLikedPosts(req.params.id, {
+      page,
+      limit,
+    });
+
+    if (result === null) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    return res.status(200).json(result);
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ error: "Internal server error" });
   }
 }
 
@@ -165,6 +220,8 @@ module.exports = {
   create,
   list,
   getOne,
+  getPosts,
+  getLikedPosts,
   update,
   remove,
 };

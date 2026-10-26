@@ -16,6 +16,10 @@ model User {
   isPrivate Boolean  @default(false)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  // NEW: one user can have many posts
+  posts     Post[]
+  likes     Like[]
 }
 
 model Post {
@@ -25,4 +29,23 @@ model Post {
   location  String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  // NEW: every post must have an author
+  authorId  Int
+  author    User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  likes     Like[]
+
+  // NEW: index for queries by author
+  @@index([authorId])
+}
+
+model Like {
+  userId    Int
+  postId    Int
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@id([userId, postId])
+  @@index([postId])
 }
