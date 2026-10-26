@@ -4,9 +4,7 @@ async function create(req, res) {
   const { imageUrl, caption, location } = req.body;
 
   if (!imageUrl) {
-    return res.status(400).json({
-      error: "imageUrl is required",
-    });
+    return res.status(400).json({ error: "imageUrl is required" });
   }
 
   try {
@@ -19,9 +17,7 @@ async function create(req, res) {
     return res.status(201).json(post);
   } catch (error) {
     console.error(error);
-    return res.status(500).json({
-      error: "Internal server error",
-    });
+    return res.status(500).json({ error: "Internal server error" });
   }
 }
 
@@ -35,7 +31,23 @@ async function list(req, res) {
   }
 }
 
+async function getOne(req, res) {
+  try {
+    const post = await postsService.getPostById(req.params.id);
+
+    if (!post) {
+      return res.status(404).json({ error: "Post not found" });
+    }
+
+    return res.status(200).json(post);
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+}
+
 module.exports = {
   create,
   list,
+  getOne,
 };
